@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="음악적 특성과 Spotify 인기도 분석 프로젝트 제안서 슬라이드덱">
+<title>음악적 특성과 인기도의 관계 — 프로젝트 제안</title>
+<style>
+:root{
+  --bg:#0a0f1e;
+  --bg2:#0d1526;
+  --card:#111a2e;
+  --card2:#0f1729;
+  --line:rgba(255,255,255,.09);
+  --text:#e9eef8;
+  --muted:#9aa8c3;
+  --teal:#2dd4bf;
+  --purple:#a78bfa;
+  --pink:#f472b6;
+  --amber:#fbbf24;
+  --grad:linear-gradient(100deg,var(--teal),var(--purple));
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:"Segoe UI","Pretendard","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";
+  position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(60% 50% at 15% 0%,rgba(45,212,191,.10),transparent 60%),
+    radial-gradient(55% 45% at 90% 10%,rgba(167,139,250,.12),transparent 60%),
+    radial-gradient(50% 40% at 80% 100%,rgba(45,212,191,.07),transparent 60%),
+    linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
+}
+body::after{
+  content:"";
+  position:fixed;inset:0;z-index:-1;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:56px 56px;
+  mask-image:radial-gradient(80% 80% at 50% 40%,#000 20%,transparent 90%);
+  pointer-events:none;
+}
+button{font-family:inherit;cursor:pointer}
+
+.deck{position:fixed;inset:0}
+.slide{
+  position:absolute;inset:0;
+  padding:clamp(1rem,3.5vh,2.6rem) clamp(1.25rem,5vw,4.5rem) clamp(4.6rem,11vh,7rem);
+  display:flex;
+  opacity:0;visibility:hidden;transform:translateX(3%);
+  transition:opacity .45s ease,transform .45s ease,visibility .45s;
+  overflow-y:auto;overflow-x:hidden;
+  scrollbar-width:none;
+}
+.slide::-webkit-scrollbar{display:none}
+.slide:focus{outline:none}
+.slide.active{opacity:1;visibility:visible;transform:none;z-index:1}
+.slide-inner{margin:auto;width:100%;max-width:1360px}
+
+.eyebrow{
+  display:inline-flex;align-items:center;gap:.5rem;
+  font-size:.72rem;font-weight:700;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--teal);
+  margin:0 0 .6rem;
+}
+.eyebrow::before{
+  content:"";width:26px;height:2px;border-radius:2px;background:var(--grad);
+}
+.slide-title{
+  font-size:clamp(1.6rem,3.6vw,2.7rem);
+  font-weight:800;line-height:1.15;
+  margin:0 0 .4rem;
+  letter-spacing:-.02em;
+}
+.slide-sub{
+  font-size:clamp(.95rem,1.5vw,1.15rem);
+  color:var(--muted);line-height:1.6;
+  margin:0 0 1.4rem;max-width:72ch;
+}
+.lead{
+  font-size:clamp(.9rem,1.35vw,1.05rem);
+  color:#c7d2e8;line-height:1.75;max-width:76ch;margin:0;
+}
+
+.grid{display:grid;gap:clamp(.8rem,1.4vw,1.25rem)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.auto{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.auto2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+
+.card{
+  background:linear-gradient(160deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:clamp(.95rem,1.8vh,1.4rem) clamp(.95rem,1.5vw,1.4rem);
+  position:relative;
+}
+.card.glow{border-color:rgba(45,212,191,.28);box-shadow:0 0 0 1px rgba(45,212,191,.08),0 18px 50px -30px rgba(45,212,191,.35)}
+.card.purple{border-color:rgba(167,139,250,.26);box-shadow:0 0 0 1px rgba(167,139,250,.08),0 18px 50px -30px rgba(167,139,250,.3)}
+.card-title{
+  font-size:clamp(.95rem,1.35vw,1.08rem);
+  font-weight:700;margin:0 0 .35rem;line-height:1.3;
+}
+.card-text{
+  font-size:clamp(.82rem,1.18vw,.95rem);
+  color:var(--muted);line-height:1.65;margin:0;
+}
+.card-text b{color:#dbe3f2;font-weight:600}
+
+.icon-badge{
+  width:40px;height:40px;border-radius:12px;
+  display:grid;place-items:center;flex:none;
+  background:rgba(45,212,191,.12);color:var(--teal);
+  border:1px solid rgba(45,212,191,.25);
+  margin-bottom:.75rem;
+}
+.icon-badge.purple{background:rgba(167,139,250,.12);color:var(--purple);border-color:rgba(167,139,250,.25)}
+.icon-badge.pink{background:rgba(244,114,182,.12);color:var(--pink);border-color:rgba(244,114,182,.25)}
+.icon-badge.amber{background:rgba(251,191,36,.12);color:var(--amber);border-color:rgba(251,191,36,.25)}
+
+.rq-badge{
+  display:inline-flex;align-items:center;gap:.35rem;
+  font-size:.68rem;font-weight:700;letter-spacing:.06em;
+  padding:.22rem .6rem;border-radius:999px;
+  background:rgba(45,212,191,.12);color:var(--teal);
+  border:1px solid rgba(45,212,191,.28);white-space:nowrap;
+}
+.rq-badge.purple{background:rgba(167,139,250,.12);color:var(--purple);border-color:rgba(167,139,250,.28)}
+.rq-badge.pink{background:rgba(244,114,182,.12);color:var(--pink);border-color:rgba(244,114,182,.28)}
+
+.tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.8rem}
+.tag{
+  font-size:.72rem;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;
+  padding:.2rem .62rem;background:rgba(255,255,255,.03);
+  white-space:nowrap;
+}
+.tag.on{color:var(--teal);border-color:rgba(45,212,191,.35);background:rgba(45,212,191,.08)}
+
+.note{
+  display:flex;gap:.7rem;align-items:flex-start;
+  font-size:clamp(.8rem,1.15vw,.92rem);
+  color:var(--muted);line-height:1.6;
+  border:1px solid rgba(251,191,36,.28);
+  background:rgba(251,191,36,.07);
+  border-radius:14px;padding:.85rem 1rem;margin-top:1.1rem;
+}
+.note svg{flex:none;margin-top:.1rem}
+.note.warn{color:#f5e6c4}
+.note.ok{border-color:rgba(45,212,191,.3);background:rgba(45,212,191,.06);color:#c9ece5}
+.callout{
+  display:flex;gap:.7rem;align-items:flex-start;
+  font-size:clamp(.82rem,1.15vw,.95rem);line-height:1.6;
+  color:#dfe7f5;
+  border:1px solid rgba(167,139,250,.3);
+  background:linear-gradient(120deg,rgba(167,139,250,.12),rgba(45,212,191,.08));
+  border-radius:14px;padding:.9rem 1.05rem;margin-top:1.15rem;
+}
+.callout svg{flex:none;margin-top:.12rem}
+
+.linkbtn{
+  display:inline-flex;align-items:center;gap:.45rem;
+  font-size:.82rem;font-weight:600;color:var(--text);
+  text-decoration:none;
+  border:1px solid var(--line);border-radius:10px;
+  padding:.5rem .85rem;background:rgba(255,255,255,.03);
+  transition:border-color .2s,background .2s,transform .2s;
+}
+.linkbtn:hover{border-color:rgba(45,212,191,.5);background:rgba(45,212,191,.08);transform:translateY(-1px)}
+.linkbtn svg{color:var(--teal)}
+
+.hero{display:flex;align-items:center;gap:clamp(1.5rem,4vw,3.5rem)}
+.hero-copy{flex:1;min-width:0}
+.disc{
+  flex:none;width:min(42vmin,300px);aspect-ratio:1;border-radius:50%;
+  position:relative;
+  background:repeating-radial-gradient(circle at center,#141d33 0 5px,#0b1220 5px 11px);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 30px 80px -40px rgba(45,212,191,.4),inset 0 0 40px rgba(0,0,0,.6);
+  animation:spin 28s linear infinite;
+}
+.disc::before{
+  content:"";position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 0deg,rgba(45,212,191,.14),rgba(167,139,250,.14),transparent 60%);
+  mask:radial-gradient(circle,transparent 30%,#000 31%);
+}
+.disc::after{
+  content:"";position:absolute;inset:40%;border-radius:50%;
+  background:radial-gradient(circle,#0a0f1e 0 30%,#1c2a46 40% 48%,transparent 50%);
+  border:1px solid rgba(255,255,255,.25);
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.5rem}
+.chip{
+  font-size:.78rem;font-weight:600;color:#cdd8ec;
+  border:1px solid var(--line);border-radius:999px;
+  padding:.38rem .9rem;background:rgba(255,255,255,.04);
+}
+.chip.teal{border-color:rgba(45,212,191,.35);color:var(--teal)}
+.chip.purple{border-color:rgba(167,139,250,.35);color:var(--purple)}
+.chip.pink{border-color:rgba(244,114,182,.35);color:var(--pink)}
+
+.hint{
+  margin-top:1.6rem;font-size:.78rem;color:#7d8aa6;
+  letter-spacing:.04em;display:flex;align-items:center;gap:.5rem;
+}
+.hint kbd{
+  font-family:inherit;font-size:.72rem;
+  border:1px solid var(--line);border-radius:6px;
+  padding:.1rem .45rem;background:rgba(255,255,255,.05);
+}
+
+.feature{
+  display:flex;flex-direction:column;gap:.2rem;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--line);border-radius:12px;
+  padding:.6rem .8rem;
+}
+.feature .fn{font-size:.8rem;font-weight:700;color:#dfe7f5;font-family:"Cascadia Code",Consolas,monospace}
+.feature .fd{font-size:.72rem;color:var(--muted);line-height:1.4}
+.feature.target{border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+.feature.target .fn{color:var(--amber)}
+.feature.meta{border-color:rgba(244,114,182,.32);background:rgba(244,114,182,.06)}
+.feature.meta .fn{color:var(--pink)}
+
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:clamp(.6rem,1vw,.9rem);position:relative;margin-top:.4rem}
+@media(min-width:900px){.steps::before{
+  content:"";position:absolute;top:21px;left:4%;right:4%;height:2px;
+  background:linear-gradient(90deg,var(--teal),var(--purple));opacity:.35;border-radius:2px;
+}}
+.step{
+  position:relative;z-index:1;text-align:center;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:.9rem .6rem;
+}
+.step-num{
+  width:34px;height:34px;border-radius:50%;
+  display:grid;place-items:center;margin:0 auto .45rem;
+  font-size:.85rem;font-weight:800;color:var(--bg);
+  background:var(--grad);
+}
+.step h4{margin:0 0 .25rem;font-size:.85rem;font-weight:700}
+.step p{margin:0;font-size:.72rem;color:var(--muted);line-height:1.5}
+
+.metric{display:flex;flex-direction:column;gap:.15rem}
+.metric .mname{font-size:.8rem;font-weight:700;color:var(--teal);font-family:"Cascadia Code",Consolas,monospace}
+.metric p{margin:0;font-size:.74rem;color:var(--muted);line-height:1.5}
+
+.vs{
+  display:grid;place-items:center;font-weight:800;color:var(--purple);
+  font-size:.85rem;letter-spacing:.1em;padding:.4rem 0;
+}
+
+.bigq{font-size:clamp(1.6rem,4.5vw,3.4rem);font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.1}
+.bigq span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+.progress{position:fixed;top:0;left:0;right:0;height:3px;z-index:20;background:rgba(255,255,255,.06)}
+.progress-fill{height:100%;width:12.5%;background:var(--grad);transition:width .45s ease}
+
+.nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:20;
+  display:flex;align-items:center;gap:1rem;justify-content:center;
+  padding:.7rem 1.25rem;
+  background:linear-gradient(180deg,rgba(10,15,30,0),rgba(10,15,30,.92) 40%);
+}
+.nav-btn{
+  width:44px;height:44px;border-radius:12px;
+  display:grid;place-items:center;
+  border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);
+  transition:border-color .2s,background .2s,color .2s;
+}
+.nav-btn:hover:not(:disabled){border-color:rgba(45,212,191,.5);background:rgba(45,212,191,.1);color:var(--teal)}
+.nav-btn:disabled{opacity:.35;cursor:default}
+.dots{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;justify-content:center}
+.dot{
+  width:9px;height:9px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.3);background:transparent;padding:0;
+  transition:all .25s ease;
+}
+.dot:hover{border-color:var(--teal)}
+.dot.active{width:26px;border-radius:999px;background:var(--grad);border-color:transparent}
+.counter{
+  font-size:.82rem;font-weight:600;color:var(--muted);
+  font-variant-numeric:tabular-nums;letter-spacing:.05em;
+  min-width:64px;text-align:center;
+}
+
+.foot{
+  position:fixed;bottom:.35rem;left:1.25rem;z-index:15;
+  font-size:.66rem;color:#5c6b8c;letter-spacing:.06em;
+}
+
+.wave{display:flex;align-items:center;gap:3px;height:44px}
+.wave span{
+  width:3px;border-radius:3px;background:var(--grad);
+  transform-origin:center;animation:wavepulse 1.6s ease-in-out infinite;
+}
+@keyframes wavepulse{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+
+@media(max-width:820px){
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .hero{flex-direction:column;text-align:left}
+  .disc{display:none}
+  .foot{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
+<main class="deck" id="deck" aria-label="프레젠테이션">
+  <section class="slide active" tabindex="-1" aria-roledescription="슬라이드" aria-label="1 / 8 제목">
+    <div class="slide-inner">
+      <div class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Data Science Project Proposal</p>
+          <h1 class="slide-title">음악적 특성과 인기도의 관계</h1>
+          <p class="slide-sub">음악적 특성은 Spotify 곡의 인기도를 얼마나 설명하고 예측할 수 있을까?</p>
+          <p class="lead" style="font-style:italic;color:var(--muted)">"Can audio features predict Spotify track popularity, and how much predictive power do they provide?"</p>
+          <div class="chips">
+            <span class="chip teal">데이터 분석 및 시각화</span>
+            <span class="chip purple">음악 데이터 마이닝</span>
+            <span class="chip pink">머신러닝 기반 회귀 분석</span>
+            <span class="chip">모델 해석 및 성능 비교</span>
+          </div>
+          <div class="wave" data-bars="28" aria-hidden="true" style="margin-top:1.6rem"></div>
+          <p class="hint"><kbd>←</kbd><kbd>→</kbd> 키 또는 하단 버튼으로 슬라이드를 이동할 수 있습니다</p>
+        </div>
+        <div class="disc" role="img" aria-label="회전하는 LP 음반 장식"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" tabindex="-1" aria-roledescription="슬라이드" aria-label="2 / 8 배경과 동기">
+    <div class="slide-inner">
+      <p class="eyebrow">Background &amp; Motivation</p>
+      <h2 class="slide-title">왜 이 주제를 분석하는가?</h2>
+      <p class="slide-sub">곡의 인기는 음악 자체의 특성뿐 아니라 다양한 외부 요인의 영향을 함께 받습니다. 이 프로젝트는 그중에서 음향적 특성과 장르 정보가 플랫폼 인기도를 얼마나 설명하고 예측할 수 있는지에 집중합니다.</p>
+      <div class="grid g3">
+        <div class="card">
+          <div class="icon-badge" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c0-1-.2-2-.5-2.9"/><path d="M12 3a9 9 0 0 1 9 9"/><path d="M12 7v5l3 2"/></svg>
+          </div>
+          <h3 class="card-title">인기에 영향을 주는 요인들</h3>
+          <p class="card-text">아티스트 인지도, 홍보·마케팅, 발매 시점, 플레이리스트 노출과 같은 외부 요인과 함께, <b>곡 자체의 음향적 특성과 장르</b>가 인기에 관여합니다.</p>
+        </div>
+        <div class="card">
+          <div class="icon-badge purple" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          </div>
+          <h3 class="card-title">인기도 점수의 의미</h3>
+          <p class="card-text">Spotify의 <b>popularity(0~100)</b>는 재생량과 최근 재생 추세 등을 반영하는 플랫폼 지표입니다. 곡의 객관적 품질이나 완성도를 뜻하지 않습니다.</p>
+        </div>
+        <div class="card">
+          <div class="icon-badge pink" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".5" fill="currentColor"/></svg>
+          </div>
+          <h3 class="card-title">연구 목표</h3>
+          <p class="card-text">음향 특성·장르 정보로 인기도를 <b>설명하고 예측할 수 있는 범위</b>를 탐색하며, 설명되지 않는 부분의 한계까지 논의합니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" tabindex="-1" aria-roledescription="슬라이드" aria-label="3 / 8 연구 질문">
+    <div class="slide-inner">
+      <p class="eyebrow">Research Questions</p>
+      <h2 class="slide-title">연구 질문과 분석 방법의 연결</h2>
+      <div class="grid g2" style="margin-top:.2rem">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem"><span class="rq-badge">RQ1</span><h3 class="card-title" style="margin:0">어떤 음악적 특성이 인기도와 가장 강한 관계를 보이는가?</h3></div>
+          <p class="card-text">danceability, energy, loudness, valence, tempo, acousticness 등을 중심으로 관계를 탐색합니다.</p>
+          <div class="tags"><span class="tag on">상관분석</span><span class="tag on">산점도</span><span class="tag on">분포 시각화</span><span class="tag on">히트맵</span></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem"><span class="rq-badge">RQ2</span><h3 class="card-title" style="margin:0">음악적 특성만으로 인기도를 얼마나 정확히 예측할 수 있는가?</h3></div>
+          <p class="card-text">인기도를 연속형 예측 대상으로 두고 기준 모델과 선형·비선형 회귀 모델의 성능을 비교합니다.</p>
+          <div class="tags"><span class="tag on">회귀 모델 비교</span><span class="tag on">MAE / RMSE / R²</span></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem"><span class="rq-badge purple">RQ3</span><h3 class="card-title" style="margin:0">장르·메타데이터를 추가하면 예측 성능은 어떻게 달라지는가?</h3></div>
+          <p class="card-text">음향 특성만 쓰는 모델(Model A)과 장르·explicit을 추가한 모델(Model B)을 동일 조건에서 비교합니다.</p>
+          <div class="tags"><span class="tag on">Model A vs B</span><span class="tag on">동일 데이터 분할·지표</span></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem"><span class="rq-badge purple">RQ4</span><h3 class="card-title" style="margin:0">모델이 중요하게 본 특성과 설명되지 않는 부분은 무엇인가?</h3></div>
+          <p class="card-text">변수 중요도와 잔차 분석으로 예측 오차가 큰 곡의 특성을 살피고, 데이터에 없는 외부 요인을 논의합니다.</p>
+          <div class="tags"><span class="tag on">permutation importance</span><span class="tag on">잔차 분석</span></div>
+        </div>
+      </div>
+      <div class="note ok" style="margin-top:1.1rem">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M22 12A10 10 0 1 1 12 2"/><path d="M8 12h8M12 8v8"/></svg>
+        <span><b style="color:#a9dfd3">질문의 흐름:</b> RQ1에서 관계를 탐색하고 RQ2에서 예측 가능성을 확인하며, RQ3에서 정보 추가 효과를, RQ4에서 해석과 한계를 다룹니다. 분석에서 얻은 <b>상관관계를 인과관계로 해석하지 않습니다.</b></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" tabindex="-1" aria-roledescription="슬라이드" aria-label="4 / 8 데이터셋과 변수">
+    <div class="slide-inner">
+      <p class="eyebrow">Dataset &amp; Features</p>
+      <h2 class="slide-title">Spotify Tracks Dataset과 주요 변수</h2>
+      <div class="grid g2" style="align-items:start">
+        <div>
+          <div class="card glow">
+            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem">
+              <span class="icon-badge amber" style="margin:0" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></span>
+              <h3 class="card-title" style="margin:0">Spotify Tracks Dataset</h3>
+            </div>
+            <p class="card-text">약 <b>114,000개 곡</b> · <b>125개 장르</b> · CSV 형식<br>위 규모는 공개 미리보기를 기준으로 확인한 값입니다.</p>
+            <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.9rem">
+              <a class="linkbtn" href="https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset" target="_blank" rel="noopener noreferrer">Kaggle 데이터셋<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></a>
+              <a class="linkbtn" href="https://huggingface.co/datasets/maharshipandya/spotify-tracks-dataset" target="_blank" rel="noopener noreferrer">미리보기<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></a>
+              <a class="linkbtn" href="https://developer.spotify.com/documentation/web-api/reference/get-track" target="_blank" rel="noopener noreferrer">Spotify API 문서<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></a>
+            </div>
+          </div>
+          <div class="note warn" style="margin-top:.9rem">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            <span>원본 CSV를 확보한 뒤 <b>실제 행·열 개수, 결측치, 변수 범위, popularity의 0~100 범위</b>를 검증하는 것을 첫 단계로 계획합니다.</span>
+          </div>
+        </div>
+        <div>
+          <div class="auto" style="gap:.55rem">
+            <div class="feature target"><span class="fn">popularity</span><span class="fd">예측 대상 · 인기도 점수 (0~100)</span></div>
+            <div class="feature"><span class="fn">danceability</span><span class="fd">춤추기 좋은 정도</span></div>
+            <div class="feature"><span class="fn">energy</span><span class="fd">곡의 강렬함과 활동성</span></div>
+            <div class="feature"><span class="fn">loudness</span><span class="fd">음량 수준</span></div>
+            <div class="feature"><span class="fn">valence</span><span class="fd">긍정적 분위기</span></div>
+            <div class="feature"><span class="fn">tempo</span><span class="fd">분당 박자 수 (BPM)</span></div>
+            <div class="feature"><span class="fn">acousticness</span><span class="fd">어쿠스틱 특성</span></div>
+            <div class="feature"><span class="fn">instrumentalness</span><span class="fd">보컬 부재 가능성 지표</span></div>
+            <div class="feature"><span class="fn">speechiness</span><span class="fd">말소리 비중 지표</span></div>
+            <div class="feature"><span class="fn">liveness</span><span class="fd">라이브 녹음 가능성 지표</span></div>
+            <div class="feature"><span class="fn">duration_ms</span><span class="fd">곡 길이</span></div>
+            <div class="feature meta"><span class="fn">track_genre</span><span class="fd">장르 (125종)</span></div>
+            <div class="feature meta"><span class="fn">explicit</span><span class="fd">노골적 가사 포함 여부</span></div>
+          </div>
+          <p class="card-text" style="margin-top:.7rem;font-size:.78rem">변수명과 실제 존재 여부는 원본 CSV에서 최종 확인합니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" tabindex="-1" aria-roledescription="슬라이드" aria-label="5 / 8 탐색적 데이터 분석 계획">
+    <div class="slide-inner">
+      <p class="eyebrow">Exploratory Data Analysis</p>
+      <h2 class="slide-title">탐색적 데이터 분석 계획 (EDA)</h2>
+      <p class="slide-sub">계획한 시각화와 각 그래프가 답하는 연구 질문을 정리합니다.</p>
+      <div class="grid g3">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem"><span class="rq-badge">RQ1</span><h3 class="card-title" style="margin:0;font-size:.95rem">인기도 분포 히스토그램</h3></div>
+          <p class="card-text">전체 인기도의 분포와 구간별 밀집도를 파악해 인기도가 편중된 구조인지 확인합니다.</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem"><span class="rq-badge">RQ1</span><h3 class="card-title" style="margin:0;font-size:.95rem">danceability × 인기도 산점도</h3></div>
+          <p class="card-text">대표 음향 변수와 인기도 사이의 선형·비선형 관계를 확인합니다.</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem"><span class="rq-badge">RQ1</span><h3 class="card-title" style="margin:0;font-size:.95rem">energy·loudness·valence × 인기도</h3></div>
+          <p class="card-text">여러 음향 변수와 인기도의 관계를 개별 그래프로 살펴 강한 관계의 변수를 탐색합니다.</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem"><span class="rq-badge">RQ1</span><h3 class="card-title" style="margin:0;font-size:.95rem">수치 변수 상관관계 히트맵</h3></div>
+          <p class="card-text">음향 변수 간 상관 구조와 인기도와의 상관 강도를 한눈에 파악합니다.</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem"><span class="rq-badge purple">RQ3</span><h3 class="card-title" style="margin:0;font-size:.95rem">장르별 인기도 분포 비교</h3></div>
+          <p class="card-text">장르에 따라 인기도 분포가 어떻게 다른지 확인해 장르 변수의 활용 가능성을 평가합니다.</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem"><span class="rq-badge pink">RQ1·RQ4</span><h3 class="card-title" style="margin:0;font-size:.95rem">인기도 구간별 음향 특성 차이</h3></div>
+          <p class="card-text">인기도 구간을 나눠 음향 특성 평균을 비교해 높은 인기도 곡의 특성을 살펴봅니다.</p>
+        </div>
+      </div>
+      <div class="note">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <span>실제 그래프 결과는 <b>분석을 수행한 뒤에만</b> 보고합니다. 이 단계에서는 분석 방법과 목적만 제시합니다.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" tabindex="-1" aria-roledescription="슬라이드" aria-label="6 / 8 머신러닝 계획">
+    <div class="slide-inner">
+      <p class="eyebrow">Machine Learning Plan</p>
+      <h2 class="slide-title">회귀 모델 학습과 평가 계획</h2>
+      <div class="grid g4">
+        <div class="card">
+          <h3 class="card-title">기준 모델</h3>
+          <p class="card-text">학습 데이터의 <b>평균 인기도</b>를 모든 곡에 예측. 모델 개선 효과를 측정하는 기준선입니다.</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">선형회귀</h3>
+          <p class="card-text">변수와 인기도 사이의 <b>기본적인 선형 관계</b>를 평가합니다.</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">랜덤 포레스트</h3>
+          <p class="card-text"><b>비선형 관계</b>와 변수 간 상호작용을 탐색합니다.</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">그래디언트 부스팅</h3>
+          <p class="card-text">순차적인 <b>오차 개선</b>을 통한 예측 성능을 비교합니다.</p>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:1rem;align-items:center">
+        <div class="card">
+          <h3 class="card-title">학습·평가 절차</h3>
+          <p class="card-text">훈련/테스트 데이터 분리 → 훈련 데이터에서 교차검증으로 모델 설정 비교 → <b>동일한 테스트 데이터</b>에서 최종 성능 평가. 전처리 정보가 테스트에 유입되지 않도록 방지합니다.</p>
+        </div>
+        <div class="grid" style="grid-template-columns:1fr auto 1fr;gap:.4rem;align-items:stretch">
+          <div class="card"><span class="rq-badge purple">Model A</span><h3 class="card-title" style="margin-top:.4rem;font-size:.95rem">음향 특성만 사용</h3><p class="card-text" style="font-size:.8rem">danceability, energy, loudness 등 수치형 음향 변수만 사용</p></div>
+          <div class="vs">VS</div>
+          <div class="card purple"><span class="rq-badge">Model B</span><h3 class="card-title" style="margin-top:.4rem;font-size:.95rem">장르·메타데이터 추가</h3><p class="card-text" style="font-size:.8rem">음향 특성 + track_genre + explicit</p></div>
+        </div>
+      </div>
+      <div class="grid g3" style="margin-top:1rem">
+        <div class="card"><div class="metric"><span class="mname">MAE</span><p>평균 절대 오차. 예측값과 실제값 차이의 평균</p></div></div>
+        <div class="card"><div class="metric"><span class="mname">RMSE</span><p>제곱근 평균 제곱 오차. 큰 예측 오차에 더 큰 페널티</p></div></div>
+        <div class="card"><div class="metric"><span class="mname">R²</span><p>모델이 설명하는 인기도 점수 변동의 비율</p></div></div>
+      </div>
+      <div class="note">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <span>분석 전에는 특정 모델이 최고 성능을 낸다고 <b>단정하지 않습니다</b>.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" tabindex="-1" aria-roledescription="슬라이드" aria-label="7 / 8 AI 에이전트 워크플로우와 모델 해석">
+    <div class="slide-inner">
+      <p class="eyebrow">AI Agent Workflow &amp; Model Interpretation</p>
+      <h2 class="slide-title">AI 에이전트 활용 흐름과 모델 해석</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num" aria-hidden="true">1</div><h4>데이터 확인</h4><p>열과 자료형 탐색 코드 작성, 데이터 규모 확인</p></div>
+        <div class="step"><div class="step-num" aria-hidden="true">2</div><h4>전처리</h4><p>품질 검사, 결측치·중복 처리, 인코딩·스케일링</p></div>
+        <div class="step"><div class="step-num" aria-hidden="true">3</div><h4>EDA</h4><p>분포·관계 시각화 코드와 그래프 작성</p></div>
+        <div class="step"><div class="step-num" aria-hidden="true">4</div><h4>모델 학습</h4><p>회귀 모델 구현과 교차검증 비교</p></div>
+        <div class="step"><div class="step-num" aria-hidden="true">5</div><h4>평가</h4><p>MAE·RMSE·R² 계산 및 비교 표 작성</p></div>
+        <div class="step"><div class="step-num" aria-hidden="true">6</div><h4>해석</h4><p>변수 중요도·잔차 분석과 해석 보조</p></div>
+      </div>
+      <div class="grid g2" style="margin-top:1rem;align-items:stretch">
+        <div class="card">
+          <h3 class="card-title">모델 해석 계획</h3>
+          <ul style="margin:.3rem 0 0;padding-left:1.15rem;color:var(--muted);font-size:clamp(.82rem,1.15vw,.93rem);line-height:1.9">
+            <li>permutation importance로 변수별 예측 기여도 평가</li>
+            <li>실제 인기도와 예측 인기도의 관계 시각화</li>
+            <li>잔차 분포로 오차가 커지는 구간 확인</li>
+            <li>변수 중요도를 인과적 영향으로 해석하지 않음</li>
+          </ul>
+        </div>
+        <div class="card purple">
+          <h3 class="card-title">검증 원칙</h3>
+          <p class="card-text">AI가 생성한 코드는 직접 실행하고, 결과와 가정이 올바른지 확인합니다. 오류 수정, 결과 검증, 재현성 점검 후 최종 발표 자료를 업데이트합니다.</p>
+        </div>
+      </div>
+      <div class="callout">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="16" r="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span><b style="color:var(--purple)">AI 에이전트가 만들어 낸 가상의 분석 결과를 실제 데이터에서 얻은 결과처럼 사용하지 않습니다.</b> 계획 단계에서는 목표와 방법만 제시하고, 수치와 결론은 분석 이후에만 보고합니다.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" tabindex="-1" aria-roledescription="슬라이드" aria-label="8 / 8 기대 결과와 한계">
+    <div class="slide-inner">
+      <p class="eyebrow">Expected Outcomes &amp; Limitations</p>
+      <h2 class="slide-title">기대 결과와 한계</h2>
+      <div class="grid g2" style="align-items:start">
+        <div>
+          <div class="card">
+            <h3 class="card-title">기대 결과의 형태</h3>
+            <ul style="margin:.3rem 0 0;padding-left:1.15rem;color:var(--muted);font-size:clamp(.82rem,1.15vw,.93rem);line-height:1.9">
+              <li>음향 변수별 인기도와의 상관 강도 순위</li>
+              <li>기준·선형·비선형 모델 간 성능 차이</li>
+              <li>장르 정보 추가에 따른 예측 성능 변화</li>
+              <li>변수 중요도 순위와 오차가 큰 곡의 특성</li>
+            </ul>
+          </div>
+          <div class="card" style="margin-top:1rem">
+            <h3 class="card-title">데이터 출처와 참고 링크</h3>
+            <p class="card-text" style="font-size:.8rem">
+              Kaggle 데이터셋 · Hugging Face 미리보기 · Spotify Web API 문서<br>
+              <a href="https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset" target="_blank" rel="noopener noreferrer" style="color:var(--teal);text-decoration:none;word-break:break-all">kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset</a>
+            </p>
+          </div>
+        </div>
+        <div>
+          <div class="card purple">
+            <h3 class="card-title">한계와 유의점</h3>
+            <ul style="margin:.3rem 0 0;padding-left:1.15rem;color:var(--muted);font-size:clamp(.82rem,1.15vw,.93rem);line-height:1.9">
+              <li>음향 특성만으로 인기도를 완전히 설명할 수 없음</li>
+              <li>아티스트 인지도·홍보·발매 시점·플레이리스트 노출 등 외부 요인은 데이터에 없음</li>
+              <li>상관관계와 인과관계는 다르며, 교란 가능성 존재</li>
+              <li>데이터 표본 구성과 수집 시점의 한계 확인 필요</li>
+            </ul>
+          </div>
+          <div class="note ok" style="margin-top:1rem">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span>실제 수치와 결론은 데이터 분석을 수행한 뒤에만 제시합니다.</span>
+          </div>
+        </div>
+      </div>
+      <div class="wave" data-bars="36" aria-hidden="true" style="margin-top:1.2rem;height:26px"></div>
+    </div>
+  </section>
+</main>
+
+<nav class="nav" aria-label="슬라이드 탐색">
+  <button class="nav-btn" id="prevBtn" aria-label="이전 슬라이드">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  </button>
+  <div class="dots" id="dots" role="group" aria-label="슬라이드 선택"></div>
+  <button class="nav-btn" id="nextBtn" aria-label="다음 슬라이드">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+  </button>
+  <span class="counter" id="counter" aria-live="polite">1 / 8</span>
+</nav>
+
+<div class="foot" aria-hidden="true">음악적 특성과 인기도의 관계 · 데이터 과학 과제 제안서</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var dotsWrap = document.getElementById('dots');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var counter = document.getElementById('counter');
+  var progressFill = document.getElementById('progressFill');
+  var current = 0;
+
+  function renderDots(){
+    dotsWrap.innerHTML = '';
+    slides.forEach(function(s, i){
+      var d = document.createElement('button');
+      d.type = 'button';
+      d.className = 'dot' + (i === current ? ' active' : '');
+      d.setAttribute('aria-label', (i + 1) + '번째 슬라이드로 이동');
+      if (i === current) d.setAttribute('aria-current', 'true');
+      d.addEventListener('click', function(){ goTo(i); });
+      dotsWrap.appendChild(d);
+    });
+  }
+
+  function goTo(n){
+    current = Math.max(0, Math.min(total - 1, n));
+    slides.forEach(function(s, i){
+      s.classList.toggle('active', i === current);
+    });
+    counter.textContent = (current + 1) + ' / ' + total;
+    progressFill.style.width = ((current + 1) / total * 100) + '%';
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === total - 1;
+    renderDots();
+    slides[current].focus({ preventScroll: true });
+  }
+
+  prevBtn.addEventListener('click', function(){ goTo(current - 1); });
+  nextBtn.addEventListener('click', function(){ goTo(current + 1); });
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+      if (e.key === ' ') e.preventDefault();
+      goTo(current + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      goTo(current - 1);
+    } else if (e.key === 'Home') {
+      goTo(0);
+    } else if (e.key === 'End') {
+      goTo(total - 1);
+    }
+  });
+
+  var touchX = null;
+  document.addEventListener('touchstart', function(e){ touchX = e.changedTouches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function(e){
+    if (touchX === null) return;
+    var dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 60) { dx < 0 ? goTo(current + 1) : goTo(current - 1); }
+    touchX = null;
+  }, { passive: true });
+
+  document.querySelectorAll('.wave').forEach(function(w){
+    var n = parseInt(w.getAttribute('data-bars') || '32', 10);
+    w.innerHTML = '';
+    for (var i = 0; i < n; i++) {
+      var b = document.createElement('span');
+      b.style.height = (20 + Math.random() * 80) + '%';
+      b.style.animationDelay = (Math.random() * 1.6).toFixed(2) + 's';
+      b.style.animationDuration = (1.3 + Math.random() * 1.5).toFixed(2) + 's';
+      w.appendChild(b);
+    }
+  });
+
+  goTo(0);
+})();
+</script>
+</body>
+</html>
